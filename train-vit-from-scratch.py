@@ -34,12 +34,24 @@ test_loader = DataLoader(test_mnist, batch_size=batch_size, shuffle=False)
 
 
 # %% Transformer model
-transformer_encoder_block = TransformerEncoderBlock(embedding_dim=embedding_dim, num_heads=4)
-summary(transformer_encoder_block, input_size=(1, patch_size, embedding_dim),
-        col_names=['input_size', 'output_size', 'num_params', 'trainable'],
-        col_width=20, row_settings=['var_names'])
-
-transformer_model = VisionTransformer(IMG_SIZE, in_channels=1, patch_size=patch_size, num_transformer_layers=12,
+transformer_model = VisionTransformer(IMG_SIZE, in_channels=1, patch_size=patch_size, num_transformer_layers=16,
                                       embedding_dim=embedding_dim, mlp_size=3072, num_heads=4,
-                                      attention_dropout=0.1, mlp_dropout=0.1, embedding_dropout=0.1,
+                                      attention_dropout=0.01, mlp_dropout=0.01, embedding_dropout=0.01,
                                       num_classes=10)
+transformer_model.train = True
+transformer_model.to(device)
+loss_fn = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(params=transformer_model.parameters(), lr=1e-4, momentum=0.9)
+
+running_loss, last_loss = 0, 0
+for epoch in range(10):
+    for i, data in enumerate(train_loader):
+        inputs, labels = data[0].to(device), data[1].to(device)
+        optimizer.zero_grad()
+        outputs = transformer_model(inputs)
+        loss = loss_fn(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        print(f'Loss at epoch {epoch+1} batch {i+1} is {loss}')
+
